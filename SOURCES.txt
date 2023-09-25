@@ -3,3 +3,4 @@ pyhide/__init__.py
 pyhide/__main__.py
 pyhide/__version__.py
 pyhide/_encoder.py
+pyhide/obfuscator.py

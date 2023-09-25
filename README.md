@@ -34,7 +34,7 @@ The purpose is to create an hard-to-read python code to "encrypt", or better "ob
 
 ## Installation
 
-Python version supported : ![Python version](https://img.shields.io/badge/python-3.5|3.6|3.7|3.8|3.9|3.10|3.11-blue.svg)
+Python version supported : ![Python version](https://img.shields.io/badge/python-3.9|3.10|3.11-blue.svg)
 
 The easiest way to the get the `pyhide` package in `Python` is via pip installation
 
@@ -245,6 +245,11 @@ See [here](https://github.com/Nico-Curti/pyhide/blob/main/.github/CONTRIBUTING.m
 **Does the obfuscated code requires some packages or external program to run?**
 
 > No, it is a pure python code... just a complicated one.
+
+## Limits and current issues
+
+* The function arg names are not correctly replaced, so if they are present the obfuscated code is incorrect
+* The obfuscated code is still quite readable... I need to better encode some parts
 
 ## Authors
 
