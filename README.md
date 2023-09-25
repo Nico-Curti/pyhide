@@ -1,3 +1,15 @@
+| **Authors**  | **Project** |  **Build Status** | **Code Quality** |
+|:------------:|:-----------:|:-----------------:|:----------------:|
+| [**N. Curti**](https://github.com/Nico-Curti) | **pyhide** | [![Python](https://github.com/Nico-Curti/pyhide/actions/workflows/python.yml/badge.svg)](https://github.com/Nico-Curti/pyhide/actions/workflows/python.yml) | **TODO** |
+
+**Appveyor:** [![appveyor](https://ci.appveyor.com/api/projects/status/djnkyxc64dlm4r6p/branch/main?svg=true)](https://ci.appveyor.com/project/Nico-Curti/pyhide-9jr6a/branch/main)
+
+[![GitHub pull-requests](https://img.shields.io/github/issues-pr/Nico-Curti/pyhide.svg?style=plastic)](https://github.com/Nico-Curti/pyhide/pulls)
+[![GitHub issues](https://img.shields.io/github/issues/Nico-Curti/pyhide.svg?style=plastic)](https://github.com/Nico-Curti/pyhide/issues)
+
+[![GitHub stars](https://img.shields.io/github/stars/Nico-Curti/pyhide.svg?label=Stars&style=social)](https://github.com/Nico-Curti/pyhide/stargazers)
+[![GitHub watchers](https://img.shields.io/github/watchers/Nico-Curti/pyhide.svg?label=Watch&style=social)](https://github.com/Nico-Curti/pyhide/watchers)
+
 # pyhide v0.0.1
 
 ## A simple python code obfuscator
