@@ -253,7 +253,7 @@ Thanks goes to all contributors of this project.
 If you have found `pyhide` helpful in your research, please consider citing the original repository
 
 ```BibTeX
-@misc{pypyhide,
+@misc{pyhide,
   author = {Curti, Nico},
   title = {pyhide - A simple python code obfuscator},
   year = {2023},
