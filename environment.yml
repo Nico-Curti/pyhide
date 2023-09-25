@@ -1,0 +1,13 @@
+name: pyhide-dev
+channels:
+  - default
+  - anaconda
+  - conda-forge
+
+dependencies:
+  # required
+  - python=3
+
+  # documentation
+  - nbsphinx
+  - IPython

@@ -1,0 +1,16 @@
+---
+engines:
+ rubocop:
+   enabled: true
+
+pylint:
+  enabled: true
+  python_version: 3
+
+exclude_paths:
+  - '.github/**'
+  - '**.md'
+  - 'docs/**'
+  - pyhide/__init__.py
+  - pyhide/__version__.py
+  - test/**
