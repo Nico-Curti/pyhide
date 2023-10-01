@@ -177,6 +177,10 @@ def main ():
   with open(args.inptfile, 'r', encoding='utf-8') as fp:
     code = fp.read()
 
+  # call the obfuscator and get the encrypted version of the
+  # code according to the provided parameters
+  obf_code = obf(code)
+
   # check if the timebomb is required
   if args.time_bomb is not None:
     now = datetime.now()
@@ -193,11 +197,7 @@ if death > now:
 '''
 exec(bomb)
 """
-  code = set_time_bomb(code=code, bomb=bomb, position=0)
-
-  # call the obfuscator and get the encrypted version of the
-  # code according to the provided parameters
-  obf_code = obf(code)
+  obf_code = set_time_bomb(code=obf_code, bomb=bomb, position=0)
 
   # dump the resulting code to the output file
   with open(args.outfile, 'w', encoding='utf-8') as fp:

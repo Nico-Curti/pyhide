@@ -165,7 +165,7 @@ class Obfuscator (object):
       root = RenameClass(lut=var_lut).visit(root)
 
     # if the class encoding is required
-    if self.rename_variable and self.rename_function and self.rename_class:
+    if self.rename_variable or self.rename_function or self.rename_class:
       # rename also the attribute members as self var and other stuffs
       root = RenameAttribute(lut=var_lut).visit(root)
 
@@ -325,6 +325,23 @@ def set_time_bomb (code : str, bomb : str, position : int) -> str:
     code : str
       Code with the time bomb inserted
   '''
+  # encrypt the bomb string
+  root = ast.parse(bomb)
+  # now we can replace the strings with the hex encoding
+  root = EncryptString().visit(root)
+  bomb = ast.unparse(root)
+  bomb = bomb.replace('\\\\', '\\')
+
+  for built_in in _BUILT_IN:
+    if f'\"{built_in}\"' in bomb: # it has been already processed by pkg
+      continue
+    bomb = bomb.replace(built_in,
+      f'getattr(__import__("builtins"), "{built_in}")'
+    )
+  bomb = ast.unparse(root)
+  bomb = bomb.replace('\\\\', '\\')
+  root = ast.parse(bomb)
+
   # parse the code
   root = ast.parse(code)
   # insert the time bomb
