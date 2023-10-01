@@ -65,6 +65,7 @@ venv.bak/
 bin/
 build*/
 __pycache__/
+notebook/
 
 # coverage
 .coverage

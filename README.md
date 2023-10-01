@@ -248,8 +248,9 @@ See [here](https://github.com/Nico-Curti/pyhide/blob/main/.github/CONTRIBUTING.m
 
 ## Limits and current issues
 
-* The function arg names are not correctly replaced, so if they are present the obfuscated code is incorrect
 * The obfuscated code is still quite readable... I need to better encode some parts
+* The obfuscated code could be increase in terms of lines' length...
+* If a pkg function use keywords with the same name of other variables they will be incorrectly replaced
 
 ## Authors
 

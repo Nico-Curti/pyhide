@@ -54,7 +54,7 @@ print('Hello World', end='', flush=True)
     code = """
 def func (a, b, c):
   return a + b + c
-print(func(1, 2, 3), end='', flush=True)
+print(func(a=1, b=2, c=3), end='', flush=True)
 """
     assert exec(code) is None
 
@@ -83,7 +83,7 @@ import numpy as np
 def func (a, b, c):
   return np.sum([a, b, c])
 
-print(func(1, 2, 3), end='', flush=True)
+print(func(a=1, b=2, c=3), end='', flush=True)
 """
     assert exec(code) is None
 

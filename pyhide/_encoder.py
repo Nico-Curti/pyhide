@@ -41,6 +41,14 @@ class RenameAttribute(ast.NodeTransformer):
   def __init__ (self, lut):
     self.lut = lut
 
+  def visit_keyword(self, node : ast.keyword) -> ast.keyword:
+    '''
+    Rename the argument names of each callable
+    '''
+    return ast.keyword(**{**node.__dict__,
+      'arg': self.lut.get(node.arg, node.arg)
+    })
+
   def visit_Attribute(self, node : ast.Attribute) -> ast.Attribute:
     '''
     Rename attribute names
@@ -62,6 +70,7 @@ class RenameFunction(ast.NodeTransformer):
     '''
     Rename function names
     '''
+
     return ast.FunctionDef(**{**node.__dict__, 
       'name': self.lut.get(node.name, node.name)
     })
@@ -95,9 +104,12 @@ class EncryptString(ast.NodeTransformer):
     '''
     Replace node of type string
     '''
-    return ast.Constant(
-      value=self.encode_string(node.value)
-    )
+    if isinstance(node.value, str):
+      return ast.Constant(
+        value=self.encode_string(node.value)
+      )
+    else:
+      return node
 
   def encode_string (self, s : str) -> str:
     '''
