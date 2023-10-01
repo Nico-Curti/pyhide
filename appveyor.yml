@@ -22,8 +22,9 @@ install:
   - "%PYTHON%\\python.exe -m pip install ."
 
   # testing libraries
-  - %PYTHON%\\python.exe -m pip install pytest
+  - "%PYTHON%\\python.exe -m pip install -r ./test/requirements.txt"
+  - "%PYTHON%\\python.exe -m pip install pytest"
 
 test_script:
-  - %PYTHON%\\Scripts\\pytest.exe test/
+  - "%PYTHON%\\Scripts\\pytest.exe ./test/"
   - exit 0

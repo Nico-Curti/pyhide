@@ -2,7 +2,7 @@
 |:------------:|:-----------:|:-----------------:|:----------------:|
 | [**N. Curti**](https://github.com/Nico-Curti) | **pyhide** | [![Python](https://github.com/Nico-Curti/pyhide/actions/workflows/python.yml/badge.svg)](https://github.com/Nico-Curti/pyhide/actions/workflows/python.yml) | [![codecov](https://codecov.io/gh/Nico-Curti/pyhide/graph/badge.svg?token=ZPWQRWTsbf)](https://codecov.io/gh/Nico-Curti/pyhide) <br> [![codebeat badge](https://codebeat.co/badges/79b67ac3-8149-49e4-9901-06d69c696beb)](https://codebeat.co/projects/github-com-nico-curti-pyhide-main) <br> [![codacy](https://app.codacy.com/project/badge/Grade/34a48ad520ec4df2bdb1fc8df22da090)](https://app.codacy.com/gh/Nico-Curti/pyhide/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) |
 
-**Appveyor:** [![appveyor](https://ci.appveyor.com/api/projects/status/djnkyxc64dlm4r6p/branch/main?svg=true)](https://ci.appveyor.com/project/Nico-Curti/pyhide-9jr6a/branch/main)
+**Appveyor:** [![appveyor](https://ci.appveyor.com/api/projects/status/vs6omlt3yg85ontx?svg=true)](https://ci.appveyor.com/project/Nico-Curti/pyhide)
 
 [![GitHub pull-requests](https://img.shields.io/github/issues-pr/Nico-Curti/pyhide.svg?style=plastic)](https://github.com/Nico-Curti/pyhide/pulls)
 [![GitHub issues](https://img.shields.io/github/issues/Nico-Curti/pyhide.svg?style=plastic)](https://github.com/Nico-Curti/pyhide/issues)

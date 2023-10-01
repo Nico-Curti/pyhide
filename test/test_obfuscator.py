@@ -85,7 +85,7 @@ import numpy as np
 def func (a, b, c):
   return np.sum([a, b, c])
 
-print(func(a=1, b=2, c=3), end='', flush=True)
+print(func(a=1, b=2, c=3.14), end='', flush=True)
 """
     assert exec(code) is None
 
@@ -93,7 +93,7 @@ print(func(a=1, b=2, c=3), end='', flush=True)
     with rstdout(stdout):
       exec(code)
 
-    assert stdout.getvalue() == '6'
+    assert np.round(float(stdout.getvalue()), 2) == 6.14
 
     obf = Obfuscator()
     obf_code = obf(code=code)
@@ -104,7 +104,7 @@ print(func(a=1, b=2, c=3), end='', flush=True)
     with rstdout(stdout):
       exec(obf_code)
 
-    assert stdout.getvalue() == '6'
+    assert np.round(float(stdout.getvalue()), 2) == 6.14
 
   def test_class_func (self):
 
