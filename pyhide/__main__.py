@@ -4,11 +4,9 @@
 import os
 import sys
 import argparse
-from datetime import datetime
 
 from pyhide import __version__
 from pyhide import Obfuscator
-from pyhide import set_time_bomb
 
 __author__ = ['Nico Curti']
 __email__ = ['nico.curti2@unibo.it']
@@ -120,17 +118,6 @@ def parse_args ():
     help='Enable/Disable the string encoding',
   )
 
-  # time bomb of the script -b
-  parser.add_argument(
-    '--bomb', '-b',
-    dest='time_bomb',
-    required=False,
-    action='store',
-    type=str,
-    default=None,
-    help='Set the maximum datetime (dd/mm/yyyy fmt) after which the code stops to run'
-  )
-
   args = parser.parse_args()
 
   return args
@@ -180,24 +167,6 @@ def main ():
   # call the obfuscator and get the encrypted version of the
   # code according to the provided parameters
   obf_code = obf(code)
-
-  # check if the timebomb is required
-  if args.time_bomb is not None:
-    now = datetime.now()
-    now = now.strftime('%d/%m/%Y')
-    bomb = f"""
-bomb = '''
-from datetime import datetime
-
-now = datetime.strptime('{now}', '%d/%m/%Y')
-death = datetime.strptime('{args.time_bomb}', '%d/%m/%Y')
-if death > now:
-  print('The code is no longer available... sorry', end='', flush=True)
-  exit(1)
-'''
-exec(bomb)
-"""
-  obf_code = set_time_bomb(code=obf_code, bomb=bomb, position=0)
 
   # dump the resulting code to the output file
   with open(args.outfile, 'w', encoding='utf-8') as fp:

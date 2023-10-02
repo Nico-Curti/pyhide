@@ -76,3 +76,7 @@ html*
 
 # .hypothesis
 .hypothesis
+
+# tests
+test/dummy.py
+test/dummy_obf.py

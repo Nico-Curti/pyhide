@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 from io import StringIO
+from subprocess import PIPE, run
 from contextlib import redirect_stdout as rstdout
 
 from pyhide import Obfuscator
-from pyhide import set_time_bomb
 
 import pytest
 import numpy as np
@@ -14,6 +15,9 @@ from datetime import datetime
 __author__  = ['Nico Curti']
 __email__ = ['nico.curti2@unibo.it']
 
+test_dir = os.path.abspath(
+  os.path.dirname(__file__)
+)
 
 class TestObfuscator:
   '''
@@ -117,8 +121,8 @@ class A:
   def func (self, x):
     return self.list + x
 
-a = A([1, 2, 3])
-print(a.func([1, 2, 3]), end='', flush=True)
+a = A(l=[1, 2, 3])
+print(a.func(x=[1, 2, 3]), end='', flush=True)
 """
     assert exec(code) is None
 
@@ -150,8 +154,8 @@ class A:
   def func (self, x):
     return self.list + x
 
-a = A([1, 2, 3])
-print(a.func([1, 2, 3]), end='', flush=True)
+a = A(l=[1, 2, 3])
+print(a.func(x=[1, 2, 3]), end='', flush=True)
 """
     assert exec(code) is None
 
@@ -190,8 +194,8 @@ class A:
   def func (self, x):
     return self.list + x
 
-a = A([1, 2, 3])
-print(a.func([1, 2, 3]), end='', flush=True)
+a = A(l=[1, 2, 3])
+print(a.func(x=[1, 2, 3]), end='', flush=True)
 """
     assert exec(code) is None
 
@@ -230,8 +234,8 @@ class A:
   def func (self, x):
     return self.list + x
 
-a = A([1, 2, 3])
-print(a.func([1, 2, 3]), end='', flush=True)
+a = A(l=[1, 2, 3])
+print(a.func(x=[1, 2, 3]), end='', flush=True)
 """
     assert exec(code) is None
 
@@ -350,7 +354,7 @@ class A:
   def func (self, x):
     return self.list + x
 
-a = A([1, 2, 3])
+a = A([1, -2, 3.14])
 print(a.func([1, 2, 3]), end='', flush=True)
 """
     assert exec(code) is None
@@ -359,7 +363,7 @@ print(a.func([1, 2, 3]), end='', flush=True)
     with rstdout(stdout):
       exec(code)
 
-    assert stdout.getvalue() == '[1, 2, 3, 1, 2, 3]'
+    assert stdout.getvalue() == '[1, -2, 3.14, 1, 2, 3]'
 
     obf = Obfuscator(
       rename_variable=False,
@@ -377,7 +381,7 @@ print(a.func([1, 2, 3]), end='', flush=True)
     with rstdout(stdout):
       exec(obf_code)
 
-    assert stdout.getvalue() == '[1, 2, 3, 1, 2, 3]'
+    assert stdout.getvalue() == '[1, -2, 3.14, 1, 2, 3]'
 
   def test_only_str (self):
 
@@ -419,9 +423,11 @@ print(a.func([1, 2, 3]), end='', flush=True)
 
     assert stdout.getvalue() == '[1, 2, 3, 1, 2, 3]'
 
-  def test_timer (self):
+  def test_main_program (self):
 
-    code = """
+    code = """#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 class A:
 
   def __init__ (self, l):
@@ -430,35 +436,42 @@ class A:
   def func (self, x):
     return self.list + x
 
-a = A([1, 2, 3])
-print(a.func([1, 2, 3]), end='', flush=True)
+a = A([1, -2, 3.14])
+print(a.func([1, -2, 3.14]), end='', flush=True)
 """
-    assert exec(code) is None
+    # dump the code to a dummy file
+    dummy_file = os.path.join(test_dir, 'dummy.py')
+    outfile = os.path.join(test_dir, 'dummy_obf.py')
 
-    stdout = StringIO()
-    with rstdout(stdout):
-      exec(code)
+    with open(dummy_file, 'w', encoding='utf-8') as fp:
+      fp.write(code)
 
-    assert stdout.getvalue() == '[1, 2, 3, 1, 2, 3]'
+    # run the pyhide program
+    proc = run(
+      f'pyhide --input {dummy_file} --variable --function --class --pkg --num --str',
+      stdout=PIPE, stderr=PIPE, universal_newlines=True, shell=True
+    )
+    # execute the program
+    out = proc.stdout
+    err = proc.stderr
+    # check error
+    assert os.path.exists(outfile)
+    assert err == ''
+    assert out == ''
 
-    obf = Obfuscator()
-    obf_code = obf(code=code)
+    # execute the encoded program
+    proc = run(
+      f'python {outfile}',
+      stdout=PIPE, stderr=PIPE, universal_newlines=True, shell=True
+    )
+    # execute the program
+    out = proc.stdout
+    err = proc.stderr
+    # check error
+    assert err == ''
+    assert out == '[1, -2, 3.14, 1, -2, 3.14]'
+    assert proc.returncode == 0
 
-    death = datetime.now()
-    death = death.strftime('%d/%m/%Y')
-    now = '1/1/1980'
-    bomb = f"""
-bomb = '''
-from datetime import datetime
-
-now = datetime.strptime('{now}', '%d/%m/%Y')
-death = datetime.strptime('{death}', '%d/%m/%Y')
-if death > now:
-  raise ValueError()
-'''
-exec(bomb)
-"""
-    obf_code = set_time_bomb(code=obf_code, bomb=bomb, position=0)
-
-    with pytest.raises(ValueError):
-      exec(obf_code)
+    # remove tmp files
+    os.remove(dummy_file)
+    os.remove(outfile)

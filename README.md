@@ -34,17 +34,25 @@ The purpose is to create an hard-to-read python code to "encrypt", or better "ob
 
 Python version supported : ![Python version](https://img.shields.io/badge/python-3.9|3.10|3.11-blue.svg)
 
-The easiest way to the get the `pyhide` package in `Python` is via pip installation
+~~The easiest way to the get the `pyhide` package in `Python` is via pip installation~~
+
+<strike>
 
 ```bash
 python -m pip install pyhide
 ```
 
-or via `conda`:
+</strike>
+
+~~or via `conda`:~~
+
+<strike>
 
 ```bash
 conda install pyhide
 ```
+
+</strike>
 
 The `Python` installation for *developers* is executed using [`setup.py`](https://github.com/Nico-Curti/pyhide/blob/main/setup.py) script.
 
@@ -79,8 +87,6 @@ optional arguments:
   --pkg, -p             Enable/Disable the package encoding
   --num, -n             Enable/Disable the number encoding
   --str, -s             Enable/Disable the string encoding
-  --bomb TIME_BOMB, -b TIME_BOMB
-                        Set the maximum datetime (dd/mm/yyyy fmt) after which the code stops to run
 
 pyHide Python package v0.0.1
 ```

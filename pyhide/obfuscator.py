@@ -233,11 +233,6 @@ class Obfuscator (object):
     ----------
     https://github.com/brandonasuncion/Python-Code-Obfuscator
     '''
-    # if it is a negative number encode its abs
-    # value, putting a invert symbol as prefix
-    if number < 0:
-      return "(~([]==())*{})".format(self._encodeInteger(lut, abs(number)))
-
     sn = str(number)
     if sn in lut:
       return lut[sn]
@@ -302,60 +297,3 @@ class Obfuscator (object):
     obf_number = f'float(\"{obf_number}\")'
     # return the obfuscated number
     return obf_number
-
-
-def set_time_bomb (code : str, bomb : str, position : int) -> str:
-  '''
-  Insert a time bomb code in the syntax to ensure
-  the stopping of the execution.
-
-  Parameters
-  ----------
-    code : str
-      Code to evaluate
-
-    bomb : str
-      Snippet of the time bomb
-
-    position : int
-      Position in which insert the time-bomb
-
-  Returns
-  -------
-    code : str
-      Code with the time bomb inserted
-  '''
-  # encrypt the bomb string
-  root = ast.parse(bomb)
-  # now we can replace the strings with the hex encoding
-  root = EncryptString().visit(root)
-  bomb = ast.unparse(root)
-  bomb = bomb.replace('\\\\', '\\')
-
-  for built_in in _BUILT_IN:
-    if f'\"{built_in}\"' in bomb: # it has been already processed by pkg
-      continue
-    bomb = bomb.replace(built_in,
-      f'getattr(__import__("builtins"), "{built_in}")'
-    )
-  bomb = ast.unparse(root)
-  bomb = bomb.replace('\\\\', '\\')
-  root = ast.parse(bomb)
-
-  # parse the code
-  root = ast.parse(code)
-  # insert the time bomb
-  root.body.insert(position,
-    ast.Expr(
-      value=ast.Call(
-        func=ast.Name(id='exec', ctx=ast.Load()),
-        args=[ast.Constant(value=bomb)],
-        keywords=[]
-      )
-    )
-  )
-  # fix the code line numbers
-  ast.fix_missing_locations(root)
-  # unparse it
-  code = ast.unparse(root)
-  return code
