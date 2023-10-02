@@ -70,7 +70,6 @@ You can use the `pyhide` library via command line.
 ```bash
 $ pyhide --help
 usage: pyhide [-h] [--version] --input INPTFILE [--output OUTFILE] [--variable] [--function] [--class] [--pkg] [--num]
-              [--str] [--bomb TIME_BOMB]
 
 pyhide - Python code obfuscator
 
