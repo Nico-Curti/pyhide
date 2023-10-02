@@ -184,7 +184,7 @@ def get_all_list_of_variable_names (root : ast.Module) -> list :
     if isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load):
       variable_names.add(node.id)
     # if it is a member variable of a class defined by self
-    elif isinstance(node, ast.Attribute) and node.value.id == 'self':
+    elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == 'self':
       variable_names.add(node.attr)
     # if it is a list of arguments defined in function definition
     elif isinstance(node, ast.FunctionDef):

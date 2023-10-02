@@ -98,6 +98,12 @@ A list of examples is showed below:
 
 <details><summary><b>Hello World</b></summary>
 <p>
+
+<b>cmd</b>
+```bash
+pyhide --input hello_world.py --variable --function --class --pkg --num --str
+```
+
 <b>Original</b>
 
 ```python
@@ -119,6 +125,12 @@ getattr(__import__('\x62\x75\x69\x6c\x74\x69\x6e\x73'), '\x70\x72\x69\x6e\x74')(
 
 <details><summary><b>Simple Function</b></summary>
 <p>
+
+<b>cmd</b>
+```bash
+pyhide --input simple_func.py --variable --function --class --pkg --num --str
+```
+
 <b>Original</b>
 
 ```python
@@ -146,6 +158,12 @@ getattr(__import__('\x62\x75\x69\x6c\x74\x69\x6e\x73'), '\x70\x72\x69\x6e\x74')(
 
 <details><summary><b>Package Function</b></summary>
 <p>
+
+<b>cmd</b>
+```bash
+pyhide --input simple_pkg.py --variable --function --class --pkg --num --str
+```
+
 <b>Original</b>
 
 ```python
@@ -175,6 +193,12 @@ getattr(__import__('\x62\x75\x69\x6c\x74\x69\x6e\x73'), '\x70\x72\x69\x6e\x74')(
 
 <details><summary><b>Class Definition</b></summary>
 <p>
+
+<b>cmd</b>
+```bash
+pyhide --input simple_class.py --variable --function --class --pkg --num --str
+```
+
 <b>Original</b>
 
 ```python
@@ -248,6 +272,10 @@ See [here](https://github.com/Nico-Curti/pyhide/blob/main/.github/CONTRIBUTING.m
 **Does the obfuscated code requires some packages or external program to run?**
 
 > No, it is a pure python code... just a complicated one.
+
+**Can I use the package to re-obfuscate an obfuscated code?**
+
+> Yes you can... but you must pay attention to the string encoding: the encoding is simply made by the hex function so when the file is re-loaded the strings are restored.
 
 ## Limits and current issues
 
