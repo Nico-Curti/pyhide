@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import ast
-import types
-import builtins
 
 from ._encoder import get_all_list_of_numbers
 from ._encoder import get_all_list_of_variable_names
@@ -25,11 +23,6 @@ __email__ = ['nico.curti2@unibo.it']
 
 __all__ = ['Obfuscator']
 
-# list of built in functions for the pure-python
-# codes
-_BUILT_IN = [name for name, obj in vars(builtins).items()
-              if isinstance(obj, types.BuiltinFunctionType)
-            ]
 
 class Obfuscator (object):
 
@@ -187,16 +180,6 @@ class Obfuscator (object):
       # now we can replace the packages with the __getitem__
       # encoding, creating an harder syntax
       root = RenamePkgAttribute(lut=mod_lut).visit(root)
-      # NOTE: to preserve the builtin functions, we need to
-      # adjust them manually
-      obf_code = ast.unparse(root)
-      for built_in in _BUILT_IN:
-        if f'\"{built_in}\"' in obf_code: # it has been already processed by pkg
-          continue
-        obf_code = obf_code.replace(built_in,
-          f'getattr(__import__("builtins"), "{built_in}")'
-        )
-      root = ast.parse(obf_code)
 
     # if the string encoding is required
     if self.encode_string:

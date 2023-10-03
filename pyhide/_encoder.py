@@ -2,9 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import ast
+import types
+import builtins
 
 __author__  = ['Nico Curti']
 __email__ = ['nico.curti2@unibo.it']
+
+# list of built in functions for the pure-python
+# codes
+_BUILT_IN = [name for name, obj in vars(builtins).items()
+              if isinstance(obj, types.BuiltinFunctionType)
+            ]
 
 
 class RenameVariable(ast.NodeTransformer):
@@ -100,6 +108,12 @@ class EncryptString(ast.NodeTransformer):
   def __init__(self):
     pass
 
+  def visit_JoinedStr(self, node : ast.JoinedStr) -> ast.JoinedStr:
+    '''
+    Replace node of type f-string
+    '''
+    return node
+
   def visit_Constant(self, node : ast.Str) -> ast.Constant:
     '''
     Replace node of type string
@@ -135,6 +149,9 @@ class RenamePkgAttribute(ast.NodeTransformer):
     Replace package attribute functions
     '''
     attr = node.attr # get the function name
+    if not hasattr(node.value, 'id'):
+      return node
+
     pkg = node.value.id # get the belonging package name
 
     # if it is a private member function you cannot
@@ -142,9 +159,16 @@ class RenamePkgAttribute(ast.NodeTransformer):
     if pkg == 'self':
       return node
 
+    # if the value of the lut is None but it is a builtin name
+    # we need to use the correct pkg
+    if self.lut.get(pkg, None) is None and attr in _BUILT_IN:
+      return ast.Name(
+        id=f'getattr(__import__("builtins"), "{attr}")',
+        ctx=ast.Load()
+      )
     # if the value of the lut is None it must be a
     # node to preserve
-    if self.lut.get(pkg, None) is None:
+    elif self.lut.get(pkg, None) is None:
       return node
 
     return ast.Name(
@@ -233,11 +257,15 @@ def get_dict_of_module_names (root : ast.Module) -> dict:
   package member function.
   '''
 
-  module_names = {node.names[0].asname : node.names[0].name
-    for node in ast.walk(root)
-      if (isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom)) \
-          and node.names[0].asname is not None
-  }
+  module_names = {}
+  for node in ast.walk(root):
+    if (isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom)):
+      name = node.names[0].name
+      asname = node.names[0].asname
+      if asname is None:
+        module_names[name] = name
+      else:
+        module_names[asname] = name
 
   return module_names
 

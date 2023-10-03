@@ -59,7 +59,7 @@ print('Hello World', end='', flush=True)
 
     code = """
 def func (a, b, c):
-  return a + b + c
+  return sum([a, b, c])
 print(func(a=1, b=2, c=3), end='', flush=True)
 """
     assert exec(code) is None
@@ -84,6 +84,7 @@ print(func(a=1, b=2, c=3), end='', flush=True)
   def test_pkg_func (self):
 
     code = """
+import datetime
 import numpy as np
 
 def func (a, b, c):
