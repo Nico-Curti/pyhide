@@ -162,8 +162,10 @@ class RenamePkgAttribute(ast.NodeTransformer):
     # if the value of the lut is None but it is a builtin name
     # we need to use the correct pkg
     if self.lut.get(pkg, None) is None and attr in _BUILT_IN:
+      pkg = ''.join(f"\\x{ord(c):02x}" for c in 'builtins')
+      attr = ''.join(f"\\x{ord(c):02x}" for c in attr)
       return ast.Name(
-        id=f'getattr(__import__("builtins"), "{attr}")',
+        id=f'getattr(__import__("{pkg}"), "{attr}")',
         ctx=ast.Load()
       )
     # if the value of the lut is None it must be a
@@ -171,8 +173,12 @@ class RenamePkgAttribute(ast.NodeTransformer):
     elif self.lut.get(pkg, None) is None:
       return node
 
+    pkg = self.lut.get(pkg, pkg)
+    pkg = ''.join(f"\\x{ord(c):02x}" for c in pkg)
+    attr = ''.join(f"\\x{ord(c):02x}" for c in attr)
+
     return ast.Name(
-      id=f'getattr(__import__("{self.lut.get(pkg, pkg)}"), "{attr}")',
+      id=f'getattr(__import__("{pkg}"), "{attr}")',
       ctx=ast.Load()
     )
 
