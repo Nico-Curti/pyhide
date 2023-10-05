@@ -105,33 +105,54 @@ class EncryptString(ast.NodeTransformer):
   Encrypt all the code strings using hex fmt.
   '''
 
-  def __init__(self):
-    pass
+  def __init__(self, lut : dict):
+    self.lut = lut
+    self._invalid_char = [' ', '']
 
   def visit_JoinedStr(self, node : ast.JoinedStr) -> ast.JoinedStr:
     '''
     Replace node of type f-string
     '''
-    return node
+    values = node.values
+    encoded = []
+    for v in values:
+      if isinstance(v, ast.Constant):
+        result = [f'{self.lut.get(x, x)}' for x in v.value]
+        enc = ''.join(f'{{chr({x})}}' if x not in self._invalid_char else x for x in result)
+        encoded.append(
+          ast.Constant(
+            value=enc
+            )
+        )
+      else:
+        encoded.append(v)
 
-  def visit_Constant(self, node : ast.Str) -> ast.Constant:
+    return ast.JoinedStr(**{**node.__dict__,
+      'values': encoded
+    })
+
+  def visit_Constant(self, node : ast.Constant) -> ast.Expr:
     '''
     Replace node of type string
     '''
-    if isinstance(node.value, str):
-      return ast.Constant(
-        value=self.encode_string(node.value)
-      )
+
+    if isinstance(node.value, str) and node.value not in self._invalid_char:
+      try:
+        result = [f'{self.lut[x]}' if x not in self._invalid_char else x for x in node.value]
+        enc = f"str(''.join(chr(x) if isinstance(x, int) else x for x in {result}))"
+        return ast.Call(
+            func=ast.Name(id='eval', ctx=ast.Load()),
+            args=[
+              ast.Constant(
+                value=enc
+              )
+            ],
+            keywords=[]
+          )
+      except KeyError: # this means that it's a float number
+        return node
     else:
       return node
-
-  def encode_string (self, s : str) -> str:
-    '''
-    Encoding function for the string according to
-    hex format.
-    '''
-    result = ''.join(f"\\x{ord(c):02x}" for c in s)
-    return result
 
 class RenamePkgAttribute(ast.NodeTransformer):
   '''
@@ -159,18 +180,7 @@ class RenamePkgAttribute(ast.NodeTransformer):
     if pkg == 'self':
       return node
 
-    # if the value of the lut is None but it is a builtin name
-    # we need to use the correct pkg
-    if self.lut.get(pkg, None) is None and attr in _BUILT_IN:
-      pkg = ''.join(f"\\x{ord(c):02x}" for c in 'builtins')
-      attr = ''.join(f"\\x{ord(c):02x}" for c in attr)
-      return ast.Name(
-        id=f'getattr(__import__("{pkg}"), "{attr}")',
-        ctx=ast.Load()
-      )
-    # if the value of the lut is None it must be a
-    # node to preserve
-    elif self.lut.get(pkg, None) is None:
+    if self.lut.get(pkg, None) is None:
       return node
 
     pkg = self.lut.get(pkg, pkg)
@@ -181,6 +191,36 @@ class RenamePkgAttribute(ast.NodeTransformer):
       id=f'getattr(__import__("{pkg}"), "{attr}")',
       ctx=ast.Load()
     )
+
+class RenameBuiltins(ast.NodeTransformer):
+  '''
+  Rename builtins function of the language using
+  the hex encoding.
+  In this case the encryption could be less expensive
+  since we surmise that no f-string will be used in
+  the original code for the function calling.
+  '''
+
+  def __init__ (self):
+    pass
+
+  def visit_Call(self, node : ast.Call) -> ast.Call:
+    '''
+    Replace the function call name
+    '''
+    # if the value of the lut is None but it is a builtin name
+    # we need to use the correct pkg
+    if node.func.id in _BUILT_IN:
+      pkg = ''.join(f"\\x{ord(c):02x}" for c in 'builtins')
+      attr = ''.join(f"\\x{ord(c):02x}" for c in node.func.id)
+      return ast.Call(**{**node.__dict__,
+        'func' : ast.Name(**{**node.func.__dict__,
+          'id': f'getattr(__import__("{pkg}"), "{attr}")',
+        })
+      })
+    else:
+      return node
+
 
 class ReplaceNumbers(ast.NodeTransformer):
   '''
@@ -289,6 +329,20 @@ def get_all_list_of_numbers (root : ast.Module) -> list:
     }
   )
   return numeric_var
+
+def get_all_char_values (root : ast.Module) -> set:
+  '''
+  Get the unique set of all char found in the code
+  for the minimal string encoding and the correct
+  creation of the header of variables.
+  '''
+  chars = { node.value
+    for node in ast.walk(root)
+      if isinstance(node, ast.Constant) and isinstance(node.value, str)
+  }
+  chars = set(''.join(chars))
+  chars = sorted(chars - {' '})
+  return chars
 
 def insert_new_variable_in_header (root : ast.Module, name : str, value : str) -> ast.Module:
   '''

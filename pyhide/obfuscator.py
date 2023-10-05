@@ -8,6 +8,7 @@ from ._encoder import get_all_list_of_variable_names
 from ._encoder import get_all_list_of_function_names
 from ._encoder import get_all_list_of_class_names
 from ._encoder import get_dict_of_module_names
+from ._encoder import get_all_char_values
 from ._encoder import insert_new_variable_in_header
 
 from ._encoder import RenameVariable
@@ -16,6 +17,7 @@ from ._encoder import RenameFunction
 from ._encoder import RenameClass
 from ._encoder import EncryptString
 from ._encoder import RenamePkgAttribute
+from ._encoder import RenameBuiltins
 from ._encoder import ReplaceNumbers
 
 __author__  = ['Nico Curti']
@@ -60,13 +62,18 @@ class Obfuscator (object):
 
     # create the syntax tree of the code
     root = ast.parse(code)
+    # get the unique set of all chars
+    chars = get_all_char_values(root)
+    # get the list of numbers to encode
+    numbers = get_all_list_of_numbers(root)
+
     # create the lut for number encoding
     numbers_lut = {}
+    # create the alias for the numbers
+    numbers_alias = {}
 
     # if the number encoding is required
     if self.encode_number:
-      # first of all get the list of numbers to encode
-      numbers = get_all_list_of_numbers(root)
       # create the hard-coded value for 0 and 1 which
       # are the bases of the encryption
       numbers_lut.update({
@@ -84,17 +91,18 @@ class Obfuscator (object):
           raise ValueError('Something strange happens with numbers...')
         numbers_lut[str(n)] = enc
 
-      # create the alias for the numbers
-      numbers_alias = {}
       # for each variable add an header-variable on
       # the top of the code
       for i, (n, v) in enumerate(numbers_lut.items()):
+        numbers_alias[str(n)] = '_' * (i + 1)
+
+      # add the code header
+      for i, (n, v) in enumerate(numbers_lut.items()):
         root = insert_new_variable_in_header(
           root=root,
-          name='_' * (i + 1),
+          name=numbers_alias[n],
           value=v
         )
-        numbers_alias[str(n)] = '_' * (i + 1)
 
       # add the extra hard-coded values to be sure
       # that all the todo-replacements will be stored
@@ -121,7 +129,6 @@ class Obfuscator (object):
         obf_code = obf_code.replace(f"\'{v}\'", f'{v}')
       root = ast.parse(obf_code)
 
-
     # declare the list of "variables" lut
     var_names, fun_names, cls_names = [], [], []
 
@@ -140,9 +147,10 @@ class Obfuscator (object):
 
     # now we can rename all the variables of the code
     # according to the obtained lut of values
+    N = len(numbers_lut)
     var_lut = {}
     for i, v in enumerate(var_names + fun_names + cls_names):
-      var_lut[v] = '_' * (i + 1 + len(numbers_lut))
+      var_lut[v] = '_' * (i + 1 + N)
 
     # if the function encoding is required
     if self.rename_variable:
@@ -170,6 +178,46 @@ class Obfuscator (object):
     # moving to the intermediate function layer, and ending with
     # the top class names.
 
+    # if the string encoding is required
+    if self.encode_string:
+      # get the current number of elements in the lut
+      N = len(numbers_lut)
+      # create the integer encoding
+      for n in chars:
+        enc = self._encodeInteger(lut=numbers_lut, number=ord(n))
+        numbers_lut[str(n)] = enc
+
+      # for each variable add an header-variable on
+      # the top of the code
+      for i, (n, v) in enumerate(numbers_lut.items()):
+        if n in chars:
+          numbers_alias[str(n)] = '_' * (i + N)
+      # now we can replace the strings with the hex encoding
+      root = EncryptString(lut=numbers_alias).visit(root)
+
+      # add the code header
+      for i, (n, v) in enumerate(numbers_lut.items()):
+        if n in chars:
+          root = insert_new_variable_in_header(
+            root=root,
+            name=numbers_alias[n],
+            value=v
+          )
+
+      # NOTE: since the variable replacement is obtained using
+      # strings, we need to adjust them manually for the correct
+      # execution of the code, inserting also the "support" for
+      # the bool values
+      obf_code = ast.unparse(root)
+      for _, v in numbers_alias.items():
+        obf_code = obf_code.replace(f"\'{v}\'", f'{v}')
+      for _, v in numbers_lut.items():
+        obf_code = obf_code.replace(f"\'{v}\'", f'{v}')
+      for _, v in numbers_lut.items():
+        obf_code = obf_code.replace('{{', '{')
+        obf_code = obf_code.replace('}}', '}')
+      root = ast.parse(obf_code)
+
     # if the pkg encoding is required
     if self.encode_pkg:
       # create the lut for the package import
@@ -177,14 +225,11 @@ class Obfuscator (object):
       # add to the lut also the variable to preserve issue related
       # to local ModuleNotFoundError
       mod_lut.update({v : None for k, v in var_lut.items()})
+      mod_lut.update({v : None for v in chars})
       # now we can replace the packages with the __getitem__
       # encoding, creating an harder syntax
       root = RenamePkgAttribute(lut=mod_lut).visit(root)
-
-    # if the string encoding is required
-    if self.encode_string:
-      # now we can replace the strings with the hex encoding
-      root = EncryptString().visit(root)
+      root = RenameBuiltins().visit(root)
 
     # the last step is the correct replacement of the hex-strings
     # in the unparsed code

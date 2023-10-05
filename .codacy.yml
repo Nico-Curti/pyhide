@@ -11,6 +11,7 @@ exclude_paths:
   - '.github/**'
   - '**.md'
   - 'docs/**'
-  - pyhide/__init__.py
-  - pyhide/__version__.py
-  - test/**
+  - 'pyhide/__init__.py'
+  - 'pyhide/__version__.py'
+  - 'examples/**'
+  - 'test/**'

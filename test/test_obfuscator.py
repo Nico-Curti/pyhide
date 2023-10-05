@@ -55,6 +55,35 @@ print('Hello World', end='', flush=True)
 
     assert stdout.getvalue() == 'Hello World'
 
+  def test_fstring (self):
+
+    code = """
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+x = 'Hello'
+name = 'Nico'
+print(f'{x} {name}', end='', flush=True)
+"""
+    assert exec(code) is None
+
+    stdout = StringIO()
+    with rstdout(stdout):
+      exec(code)
+
+    assert stdout.getvalue() == 'Hello Nico'
+
+    obf = Obfuscator()
+    obf_code = obf(code=code)
+
+    assert exec(obf_code) is None
+
+    stdout = StringIO()
+    with rstdout(stdout):
+      exec(obf_code)
+
+    assert stdout.getvalue() == 'Hello Nico'
+
   def test_simple_func (self):
 
     code = """
