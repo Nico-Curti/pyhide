@@ -94,7 +94,7 @@ pyHide Python package v0.0.1
 
 The code obfuscator performs a full encoding of the original Python script, preserving the correctness of the syntax and providing a novel ready-to-use Python code.
 
-A list of examples is showed below:
+A list of [examples](https://github.com/Nico-Curti/pyhide/blob/main/examples) is showed below:
 
 <details><summary><b>Hello World</b></summary>
 <p>
