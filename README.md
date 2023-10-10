@@ -304,7 +304,7 @@ ____ = [___, __, _]
 </p>
 </details>
 
-* The obfuscated code could be increase in terms of lines' length...
+* The obfuscated code could be very long in terms of lines' length... especially when the `reduce_line_length` is set to `False`
 
 <details><summary><b>Example</b></summary>
 <p>
