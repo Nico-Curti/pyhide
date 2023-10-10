@@ -301,8 +301,15 @@ class Obfuscator (object):
         node.__dict__.update(obf_node.__dict__)
 
       # if it is an import package
-      elif isinstance(node, ast.Import) or \
-           isinstance(node, ast.ImportFrom):
+      elif isinstance(node, ast.Import):
+        # we can directly remove the package
+        # since all the other functions will
+        # replaced
+        if self.encode_pkg:
+          node.__class__ = ast.Del
+
+      # if it is an import package
+      elif isinstance(node, ast.ImportFrom):
         # obfuscate the imported aliases
         obf_node, header = encrypt_import_aliases(
           node=node,
