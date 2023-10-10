@@ -349,6 +349,9 @@ def encodeFloat (number : float) -> str:
   syntax for the evaluation of the floating point numbers,
   since the original number encoding works only for integers.
 
+  The encoding is made converting the number as hex string
+  and then re-analyzed using chr of integer
+
   Parameters
   ----------
     number : float
@@ -365,8 +368,10 @@ def encodeFloat (number : float) -> str:
   '''
   # convert the number to string
   obf_number = str(number)
-  # replace it as a call to the float function
-  obf_number = f'float(\"{obf_number}\")'
+  # replace it as an hex string
+  obf_number = ''.join(f"\\x{ord(c):02x}" for c in obf_number)
+  # create a function encoding with concatenated chars
+  obf_number = f'float(str("".join(chr(x) if isinstance(x, int) else x for x in "{obf_number}")))'
   # return the obfuscated number
   return obf_number
 
@@ -474,6 +479,8 @@ def create_encryption_lut (root : ast.Module,
   alias.update(set(fun_names))
   alias.update(set(cls_names))
   alias.update(set(mod_lut.keys()))
+  # force the adding of bool vars
+  alias.update({'True', 'False'})
 
   # create the lut of values
   lut = {k : '_' * (i + 1)
@@ -615,14 +622,18 @@ def encrypt_constant_bools (node: ast.Constant,
   # for the search in the lut
   value = int(node.value)
 
+  # get the variable name by the lut
+  var_name = lut.get(str(node.value), str(node.value))
+
   obf_node = ast.Constant(
     **{**node.__dict__,
        # convert the integer to string
        # since the lut store string representation
        # of the numbers
-       'value' : NUMBERS_LUT[str(value)]
+       'value' : var_name
     }
   )
+  header[var_name] = NUMBERS_LUT[str(value)]
 
   return obf_node, header
 
