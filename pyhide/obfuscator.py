@@ -3,22 +3,28 @@
 
 import ast
 
-from ._encoder import get_all_list_of_numbers
-from ._encoder import get_all_list_of_variable_names
-from ._encoder import get_all_list_of_function_names
-from ._encoder import get_all_list_of_class_names
+from ._encoder import _BUILT_IN
+from ._encoder import create_encryption_lut
 from ._encoder import get_dict_of_module_names
-from ._encoder import get_all_char_values
-from ._encoder import insert_new_variable_in_header
-
-from ._encoder import RenameVariable
-from ._encoder import RenameAttribute
-from ._encoder import RenameFunction
-from ._encoder import RenameClass
-from ._encoder import EncryptString
-from ._encoder import RenamePkgAttribute
-from ._encoder import RenameBuiltins
-from ._encoder import ReplaceNumbers
+from ._encoder import encrypt_constant_strings
+from ._encoder import encrypt_joined_string
+from ._encoder import encrypt_constant_bools
+from ._encoder import encrypt_constant_integers
+from ._encoder import encrypt_constant_floats
+from ._encoder import encrypt_variable_name
+from ._encoder import encrypt_function_def
+from ._encoder import encrypt_function_arg
+from ._encoder import encrypt_function_arguments
+from ._encoder import encrypt_function_keyword
+from ._encoder import encrypt_package_attribute
+from ._encoder import encrypt_self_attribute
+from ._encoder import encrypt_generic_attribute
+from ._encoder import encrypt_builtin_function
+from ._encoder import encrypt_generic_function
+from ._encoder import encrypt_class_def
+from ._encoder import encrypt_import_aliases
+from ._encoder import add_header_variables
+from ._encoder import clean_header_issues
 
 __author__  = ['Nico Curti']
 __email__ = ['nico.curti2@unibo.it']
@@ -34,7 +40,8 @@ class Obfuscator (object):
     rename_class : bool = True,
     encode_pkg : bool = True,
     encode_number : bool = True,
-    encode_string : bool = True
+    encode_string : bool = True,
+    reduce_code_length : bool = False,
     ):
 
     self.rename_variable = rename_variable
@@ -43,6 +50,7 @@ class Obfuscator (object):
     self.encode_pkg = encode_pkg
     self.encode_number = encode_number
     self.encode_string = encode_string
+    self.reduce_code_length = reduce_code_length
 
   def __call__ (self, code : str) -> str :
     '''
@@ -62,266 +70,263 @@ class Obfuscator (object):
 
     # create the syntax tree of the code
     root = ast.parse(code)
-    # get the unique set of all chars
-    chars = get_all_char_values(root)
-    # get the list of numbers to encode
-    numbers = get_all_list_of_numbers(root)
 
-    # create the lut for number encoding
-    numbers_lut = {}
-    # create the alias for the numbers
-    numbers_alias = {}
+    # get the lookup table of all the possible
+    # values that can be replaced in the code
+    lut = create_encryption_lut(
+      root=root,
+      rename_variable=self.rename_variable,
+      rename_function=self.rename_function,
+      rename_class=self.rename_class,
+      encode_pkg=self.encode_pkg,
+      encode_number=self.encode_number,
+      encode_string=self.encode_string,
+    )
 
-    # if the number encoding is required
-    if self.encode_number:
-      # create the hard-coded value for 0 and 1 which
-      # are the bases of the encryption
-      numbers_lut.update({
-        '0' : '((()==[])+(()==[]))',
-        '1' : '({0}**{0})'.format('((()==[])+(()==[]))'),
-      })
-      # create the lut of numbers-encoding according
-      # to the variable type
-      for n in numbers:
-        if isinstance(n, int):
-          enc = self._encodeInteger(lut=numbers_lut, number=n)
-        elif isinstance(n, float):
-          enc = self._encodeFloat(number=n)
-        else:
-          raise ValueError('Something strange happens with numbers...')
-        numbers_lut[str(n)] = enc
+    # import module lookup table
+    module_lut = {}
 
-      # for each variable add an header-variable on
-      # the top of the code
-      for i, (n, v) in enumerate(numbers_lut.items()):
-        numbers_alias[str(n)] = '_' * (i + 1)
-
-      # add the code header
-      for i, (n, v) in enumerate(numbers_lut.items()):
-        root = insert_new_variable_in_header(
-          root=root,
-          name=numbers_alias[n],
-          value=v
-        )
-
-      # add the extra hard-coded values to be sure
-      # that all the todo-replacements will be stored
-      # in this dictionary
-      numbers_lut['True'] = '(()==())'
-      numbers_lut['False'] = '(()==[])'
-      # this list of numbers must be fixed at the end
-      # of the processing, since the associated value
-      # is set to a string, while it must be an expression
-
-      # now we can replace the numbers with the obtained
-      # encoding of the variables
-      root = ReplaceNumbers(lut=numbers_alias).visit(root)
-      # NOTE: since the variable replacement is obtained using
-      # strings, we need to adjust them manually for the correct
-      # execution of the code, inserting also the "support" for
-      # the bool values
-      obf_code = ast.unparse(root)
-      obf_code = obf_code.replace('True', numbers_lut['True'])
-      obf_code = obf_code.replace('False', numbers_lut['False'])
-      for _, v in numbers_alias.items():
-        obf_code = obf_code.replace(f"\'{v}\'", f'{v}')
-      for _, v in numbers_lut.items():
-        obf_code = obf_code.replace(f"\'{v}\'", f'{v}')
-      root = ast.parse(obf_code)
-
-    # declare the list of "variables" lut
-    var_names, fun_names, cls_names = [], [], []
-
-    # if the variable encoding is required
-    if self.rename_variable:
-      # now get the list of all variable names
-      var_names = get_all_list_of_variable_names(root)
-    # if the function encoding is required
-    if self.rename_function:
-      # now get the list of all function names
-      fun_names = get_all_list_of_function_names(root)
-    # if the class encoding is required
-    if self.rename_class:
-      # now get the list of all class names
-      cls_names = get_all_list_of_class_names(root)
-
-    # now we can rename all the variables of the code
-    # according to the obtained lut of values
-    N = len(numbers_lut)
-    var_lut = {}
-    for i, v in enumerate(var_names + fun_names + cls_names):
-      var_lut[v] = '_' * (i + 1 + N)
-
-    # if the function encoding is required
-    if self.rename_variable:
-      # the first layer of renaming is given by the code-variables
-      root = RenameVariable(lut=var_lut).visit(root)
-    # if the function encoding is required
-    if self.rename_function:
-      # the second layer of renaming is given by the functions
-      root = RenameFunction(lut=var_lut).visit(root)
-    # if the class encoding is required
-    if self.rename_class:
-      # the third layer of renaming is given by the class names
-      root = RenameClass(lut=var_lut).visit(root)
-
-    # if the class encoding is required
-    if self.rename_variable or self.rename_function or self.rename_class:
-      # rename also the attribute members as self var and other stuffs
-      root = RenameAttribute(lut=var_lut).visit(root)
-
-    # NOTE: the above three steps could not be implemented
-    # into a single class, since the tree exploration is
-    # stopped according to the first item found... so we need
-    # to walk along the code according to a bottom-up exploration,
-    # starting from the finest grain given by the variables,
-    # moving to the intermediate function layer, and ending with
-    # the top class names.
-
-    # if the string encoding is required
-    if self.encode_string:
-      # get the current number of elements in the lut
-      N = len(numbers_lut)
-      # create the integer encoding
-      for n in chars:
-        enc = self._encodeInteger(lut=numbers_lut, number=ord(n))
-        numbers_lut[str(n)] = enc
-
-      # for each variable add an header-variable on
-      # the top of the code
-      for i, (n, v) in enumerate(numbers_lut.items()):
-        if n in chars:
-          numbers_alias[str(n)] = '_' * (i + N)
-      # now we can replace the strings with the hex encoding
-      root = EncryptString(lut=numbers_alias).visit(root)
-
-      # add the code header
-      for i, (n, v) in enumerate(numbers_lut.items()):
-        if n in chars:
-          root = insert_new_variable_in_header(
-            root=root,
-            name=numbers_alias[n],
-            value=v
-          )
-
-      # NOTE: since the variable replacement is obtained using
-      # strings, we need to adjust them manually for the correct
-      # execution of the code, inserting also the "support" for
-      # the bool values
-      obf_code = ast.unparse(root)
-      for _, v in numbers_alias.items():
-        obf_code = obf_code.replace(f"\'{v}\'", f'{v}')
-      for _, v in numbers_lut.items():
-        obf_code = obf_code.replace(f"\'{v}\'", f'{v}')
-      for _, v in numbers_lut.items():
-        obf_code = obf_code.replace('{{', '{')
-        obf_code = obf_code.replace('}}', '}')
-      root = ast.parse(obf_code)
-
-    # if the pkg encoding is required
     if self.encode_pkg:
-      # create the lut for the package import
-      mod_lut = get_dict_of_module_names(root)
-      # add to the lut also the variable to preserve issue related
-      # to local ModuleNotFoundError
-      mod_lut.update({v : None for k, v in var_lut.items()})
-      mod_lut.update({v : None for v in chars})
-      # now we can replace the packages with the __getitem__
-      # encoding, creating an harder syntax
-      root = RenamePkgAttribute(lut=mod_lut).visit(root)
-      root = RenameBuiltins().visit(root)
+      # get the import module lookup table
+      # to discriminate between the attributes
+      module_lut = get_dict_of_module_names(root=root)
 
-    # the last step is the correct replacement of the hex-strings
-    # in the unparsed code
+    # create an empty header dict in which store
+    # the variables created by the obfuscator
+    header = {}
+
+    # start the code encrypting
+
+    # loop along the code tree
+    for node in ast.walk(root):
+
+      # if it is a Module instance
+      if isinstance(node, ast.Module):
+        continue
+
+      # if it is a simple string constant
+      elif isinstance(node, ast.Constant) and \
+           isinstance(node.value, str):
+        if self.encode_string:
+          # obfuscate the value
+          obf_node, header = encrypt_constant_strings(
+            node=node,
+            lut=lut,
+            header=header,
+            reduce_code_length=self.reduce_code_length,
+          )
+          node.__class__ = obf_node.__class__
+          node.__dict__.update(obf_node.__dict__)
+
+      # if it is an f-string constant
+      elif isinstance(node, ast.JoinedStr):
+        if self.encode_string:
+          # obfuscate the f-string elements
+          obf_node, header = encrypt_joined_string(
+            node=node,
+            lut=lut,
+            header=header,
+          )
+          node.__class__ = obf_node.__class__
+          node.__dict__.update(obf_node.__dict__)
+
+      # if it is a bool variable (aka True or False)
+      elif isinstance(node, ast.Constant) and \
+           isinstance(node.value, bool):
+        if self.encode_number:
+          # obfuscate the value
+          obf_node, header = encrypt_constant_bools(
+            node=node,
+            lut=lut,
+            header=header,
+          )
+          node.__class__ = obf_node.__class__
+          node.__dict__.update(obf_node.__dict__)
+
+      # if it is an integer variable
+      elif isinstance(node, ast.Constant) and \
+           isinstance(node.value, int):
+        if self.encode_number:
+          # obfuscate the value
+          obf_node, header = encrypt_constant_integers(
+            node=node,
+            lut=lut,
+            header=header,
+          )
+          node.__class__ = obf_node.__class__
+          node.__dict__.update(obf_node.__dict__)
+
+      # if it is an float variable
+      elif isinstance(node, ast.Constant) and \
+           isinstance(node.value, float):
+        if self.encode_number:
+          # obfuscate the value
+          obf_node, header = encrypt_constant_floats(
+            node=node,
+            lut=lut,
+            header=header,
+          )
+          node.__class__ = obf_node.__class__
+          node.__dict__.update(obf_node.__dict__)
+
+      # if it is just a name in the code
+      elif isinstance(node, ast.Name):
+        # obfuscate the variable name
+        obf_node, header = encrypt_variable_name(
+          node=node,
+          lut=lut,
+          header=header,
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+      # if it is a function definition
+      elif isinstance(node, ast.FunctionDef):
+        # obfuscate the function name
+        obf_node, header = encrypt_function_def(
+          node=node,
+          lut=lut,
+          header=header,
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+      # if it is a function arg
+      elif isinstance(node, ast.arg):
+        # obfuscate the arg name
+        obf_node, header = encrypt_function_arg(
+          node=node,
+          lut=lut,
+          header=header,
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+      # if it is a function arguments
+      elif isinstance(node, ast.arguments):
+        # obfuscate the arguments name
+        obf_node, header = encrypt_function_arguments(
+          node=node,
+          lut=lut,
+          header=header,
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+      # if it is a function keyword
+      elif isinstance(node, ast.keyword):
+        # obfuscate the keyword name
+        obf_node, header = encrypt_function_keyword(
+          node=node,
+          lut=lut,
+          header=header,
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+      # if it is a package attribute
+      elif isinstance(node, ast.Attribute) and \
+           isinstance(node.value, ast.Name) and \
+           node.value.id in module_lut:
+        # obfuscate the package attribute
+        obf_node, header = encrypt_package_attribute(
+          node=node,
+          lut=lut,
+          header=header,
+          module_lut=module_lut
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+      # if it is a self attribute
+      elif isinstance(node, ast.Attribute) and \
+           isinstance(node.value, ast.Name) and \
+           node.value.id == 'self':
+        # obfuscate the package attribute
+        obf_node, header = encrypt_self_attribute(
+          node=node,
+          lut=lut,
+          header=header,
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+      # if it is a generic attribute
+      elif isinstance(node, ast.Attribute) and \
+           isinstance(node.value, ast.Name):
+        # obfuscate the package attribute
+        obf_node, header = encrypt_generic_attribute(
+          node=node,
+          lut=lut,
+          header=header,
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+      # if it is a builtin function
+      elif isinstance(node, ast.Call) and \
+           isinstance(node.func, ast.Name) and \
+           node.func.id in _BUILT_IN:
+        if self.rename_function:
+          # obfuscate the function name
+          obf_node, header = encrypt_builtin_function(
+            node=node,
+            lut=lut,
+            header=header,
+          )
+          node.__class__ = obf_node.__class__
+          node.__dict__.update(obf_node.__dict__)
+
+      # if it is a generic callable object
+      elif isinstance(node, ast.Call) and \
+           isinstance(node.func, ast.Name):
+        # obfuscate the function name
+        obf_node, header = encrypt_generic_function(
+          node=node,
+          lut=lut,
+          header=header,
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+      # if it is a class definition
+      elif isinstance(node, ast.ClassDef):
+        # obfuscate the class name
+        obf_node, header = encrypt_class_def(
+          node=node,
+          lut=lut,
+          header=header,
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+      # if it is an import package
+      elif isinstance(node, ast.Import) or \
+           isinstance(node, ast.ImportFrom):
+        # obfuscate the imported aliases
+        obf_node, header = encrypt_import_aliases(
+          node=node,
+          lut=lut,
+          header=header,
+        )
+        node.__class__ = obf_node.__class__
+        node.__dict__.update(obf_node.__dict__)
+
+    # at the end of the encoding we need
+    # to add the new extra-variables stored
+    # in the header
+    root = add_header_variables(
+      root=root,
+      header=header
+    )
+
+    # now we can re-convert the code
     obf_code = ast.unparse(root)
-    obf_code = obf_code.replace('\\\\', '\\')
+
+    # and clean the code as post-processing step
+    obf_code = clean_header_issues(
+      code=obf_code,
+      header=header
+    )
 
     return obf_code
-
-  def _encodeInteger (self, lut : dict, number : int) -> str:
-    '''
-    Encode integer numbers.
-    This is the magic trick performed by the original
-    python-code-obfuscator project by brandonasuncion
-
-    Parameters
-    ----------
-      lut : dict
-        Look-up table of pre-determined values
-
-      number : int
-        Integer number to encrypt
-
-    Returns
-    -------
-      obf_number : str
-        Obfuscated integer number as string
-
-    References
-    ----------
-    https://github.com/brandonasuncion/Python-Code-Obfuscator
-    '''
-    sn = str(number)
-    if sn in lut:
-      return lut[sn]
-
-    # get the binary format of the number
-    bin_number = bin(number)[2:]
-    shifts = 0
-    obf_number = ''
-
-    while bin_number != '':
-      if bin_number[-1] == '1':
-
-        if shifts == 0:
-          obf_number += lut['1']
-
-        elif str(1<<shifts) in lut:
-          obf_number += lut[str(1<<shifts)]
-
-        elif str(shifts) in lut:
-          encode_bitshift = lut[str(shifts)]
-          obf_number += '({}<<{})'.format(lut['1'], encode_bitshift)
-
-        else:
-          bit_m1 = self._encodeInteger(lut, 1 << (shifts-1))
-          obf_number += '({}<<{})'.format(bit_m1, lut['1'])
-
-        obf_number += '+'
-
-      bin_number = bin_number[:-1]
-      shifts += 1
-    if bin_number.count('1') == 1:
-      obf_number = obf_number[:-1]
-    else:
-      obf_number = "({})".format(obf_number[:-1])
-
-    return obf_number
-
-  def _encodeFloat (self, number : float) -> str:
-    '''
-    Encode float numbers.
-    This is just a workaround to create a more complex
-    syntax for the evaluation of the floating point numbers,
-    since the original number encoding works only for integers.
-
-    Parameters
-    ----------
-      number : float
-        Float number to encrypt
-
-    Returns
-    -------
-      obf_number : str
-        Obfuscated integer number as string
-
-    References
-    ----------
-    https://github.com/brandonasuncion/Python-Code-Obfuscator
-    '''
-    # convert the number to string
-    obf_number = str(number)
-    # replace it as a call to the float function
-    obf_number = f'float(\"{obf_number}\")'
-    # return the obfuscated number
-    return obf_number

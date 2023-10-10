@@ -118,6 +118,16 @@ def parse_args ():
     help='Enable/Disable the string encoding',
   )
 
+  # encode string with integers -b
+  parser.add_argument(
+    '--enc', '-b',
+    dest='reduce_code_length',
+    required=False,
+    action='store_true',
+    default=False,
+    help='Enable/Disable the string encoding with integers to reduce the code length',
+  )
+
   args = parser.parse_args()
 
   return args
@@ -158,6 +168,7 @@ def main ():
     encode_pkg=args.encode_pkg,
     encode_number=args.encode_number,
     encode_string=args.encode_string,
+    reduce_code_length=args.reduce_code_length
   )
 
   # parse the input file

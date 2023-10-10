@@ -453,6 +453,61 @@ print(a.func([1, 2, 3]), end='', flush=True)
 
     assert stdout.getvalue() == '[1, 2, 3, 1, 2, 3]'
 
+  def test_reduce_code_length (self):
+
+    code = """
+print('Hi, my name is Nico', end='', flush=True)
+"""
+    assert exec(code) is None
+
+    stdout = StringIO()
+    with rstdout(stdout):
+      exec(code)
+
+    assert stdout.getvalue() == 'Hi, my name is Nico'
+
+    obf = Obfuscator(
+      rename_variable=True,
+      rename_function=True,
+      rename_class=True,
+      encode_pkg=True,
+      encode_number=True,
+      encode_string=True,
+      reduce_code_length=False
+    )
+    obf_code = obf(code=code)
+
+    assert exec(obf_code) is None
+
+    stdout = StringIO()
+    with rstdout(stdout):
+      exec(obf_code)
+
+    assert stdout.getvalue() == 'Hi, my name is Nico'
+
+    num_chars = len(obf_code)
+
+    obf = Obfuscator(
+      rename_variable=True,
+      rename_function=True,
+      rename_class=True,
+      encode_pkg=True,
+      encode_number=True,
+      encode_string=True,
+      reduce_code_length=True
+    )
+    obf_code = obf(code=code)
+
+    assert exec(obf_code) is None
+
+    stdout = StringIO()
+    with rstdout(stdout):
+      exec(obf_code)
+
+    assert stdout.getvalue() == 'Hi, my name is Nico'
+
+    assert num_chars > len(obf_code)
+
   def test_main_program (self):
 
     code = """#!/usr/bin/env python
