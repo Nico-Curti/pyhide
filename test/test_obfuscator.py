@@ -508,6 +508,44 @@ print('Hi, my name is Nico', end='', flush=True)
 
     assert num_chars > len(obf_code)
 
+  def test_only_operator (self):
+
+    code = """
+def func (x, y):
+  return x**y
+
+a = 3 + 4 - 2
+b = 42 // 2
+c = func(x=2, y=2)
+print( (b / a) * c, end='', flush=True)
+"""
+    assert exec(code) is None
+
+    stdout = StringIO()
+    with rstdout(stdout):
+      exec(code)
+
+    assert stdout.getvalue() == '16.8'
+
+    obf = Obfuscator(
+      rename_variable=False,
+      rename_function=False,
+      rename_class=False,
+      encode_pkg=False,
+      encode_number=False,
+      encode_string=False,
+      encode_operator=True
+    )
+    obf_code = obf(code=code)
+
+    assert exec(obf_code) is None
+
+    stdout = StringIO()
+    with rstdout(stdout):
+      exec(obf_code)
+
+    assert stdout.getvalue() == '16.8'
+
   def test_main_program (self):
 
     code = """#!/usr/bin/env python

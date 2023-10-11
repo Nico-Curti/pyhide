@@ -20,6 +20,23 @@ NUMBERS_LUT = {
   '1' : '((()==[])+(()==()))',
 }
 
+# global lut for operator values
+op_lut = {
+  ast.Add : '__add__',
+  ast.Sub : '__sub__',
+  ast.Mult : '__mul__',
+  ast.Div : '__truediv__',
+  ast.FloorDiv : '__floordiv__',
+  ast.Mod : '__mod__',
+  ast.Pow : '__pow__',
+  ast.LShift : '__lshift__',
+  ast.RShift : '__rshift__',
+  ast.BitAnd : '__and__',
+  ast.BitOr : '__or__',
+  ast.BitXor : '__xor__',
+  ast.MatMult : '__matmul__'
+}
+
 def get_all_list_of_variable_names (root : ast.Module) -> list :
   '''
   Get the list of all variable names defined in the
@@ -121,13 +138,18 @@ def get_all_list_of_function_names (root : ast.Module) -> list:
     }
   )
 
+  # get the list of modules to skip the global
+  # import functions
+  modules = get_dict_of_module_names(root)
+
   # add also the names of the function which are
   # called in the code, if they have a name
   function_names += sorted({node.func.id
     for node in ast.walk(root)
       # only functions with name has an id
       if isinstance(node, ast.Call) and \
-         isinstance(node.func, ast.Name)
+         isinstance(node.func, ast.Name) and \
+         (node.func.id in _BUILT_IN or node.func.id in modules.values())
     }
   )
 
@@ -169,21 +191,43 @@ def get_dict_of_module_names (root : ast.Module) -> dict:
   # walk along the code tree
   for node in ast.walk(root):
 
-    # if they are nodes related to imports
-    if isinstance(node, ast.Import) or \
-       isinstance(node, ast.ImportFrom):
+    # if they are nodes related to imports from
+    if isinstance(node, ast.ImportFrom):
+      # loop along all the imports
+      for mod in node.names:
+        # get the module name
+        name = mod.name
+        # get the optional alias
+        asname = mod.asname
 
-      # get the module name
-      name = node.names[0].name
-      # get the optional alias
-      asname = node.names[0].asname
-      # if there is no alias
-      if asname is None:
-        # set the key equal to the value
-        module_names[name] = name
-      else:
-        # otherwise use the alias for the indexing
-        module_names[asname] = name
+        # if it is a global import
+        if name == '*':
+          # skip it
+          continue
+        # if there is no alias
+        elif asname is None:
+          # set the key equal to the module name
+          module_names[name] = node.module
+        else:
+          # otherwise use the alias for the indexing
+          module_names[asname] = name
+          module_names[name] = node.module
+
+    elif isinstance(node, ast.Import):
+      # loop along all the imports
+      for mod in node.names:
+        # get the module name
+        name = mod.name
+        # get the optional alias
+        asname = mod.asname
+
+        # if there is no alias
+        if asname is None:
+          # set the key equal to the value
+          module_names[name] = name
+        else:
+          # otherwise use the alias for the indexing
+          module_names[asname] = name
 
   # return the obtained lut
   return module_names
@@ -483,7 +527,7 @@ def create_encryption_lut (root : ast.Module,
   alias.update({'True', 'False'})
 
   # create the lut of values
-  lut = {k : '_' * (i + 1)
+  lut = {k : '_' * (i + 3)
     for i, k in enumerate(alias)
   }
 
@@ -1094,11 +1138,13 @@ def encrypt_package_attribute (node: ast.Attribute,
       Updated header
   '''
   # get the package full name
-  pkg = module_lut[node.value.id]
+  pkg = module_lut.get(node.value.id, node.value.id)
+  # get the attribute full name
+  attr = module_lut.get(node.attr, node.attr)
   # encrypt the package name using hex string
   pkg = ''.join(f"\\x{ord(c):02x}" for c in pkg)
   # encrypt the package attribute using hex string
-  attr = ''.join(f"\\x{ord(c):02x}" for c in node.attr)
+  attr = ''.join(f"\\x{ord(c):02x}" for c in attr)
   # transform the node into a Name one
   # with the function call given by the
   # 'geattr' function using as much strings as possible ;)
@@ -1464,6 +1510,105 @@ def encrypt_joined_string (node: ast.JoinedStr,
     **{**node.__dict__,
       'values': encoded,
     }
+  )
+
+  return obf_node, header
+
+def encrypt_binary_operator (node: ast.BinOp,
+                             lut: dict,
+                             header: dict
+                            ) -> ast.Call:
+  '''
+  Encryption of binary operator nodes.
+
+  The encryption is made by replacing the operator
+  symbol with the associated magic function of the
+  class.
+
+  Parameters
+  ----------
+    node: ast.BinOp
+      Ast binary operator node to process
+
+    lut: dict
+      Lookup table for the code obfuscator
+
+    header: dict
+      Lookup table of the header variables
+      to add on the obfuscated code
+
+  Returns
+  -------
+    obf_node: ast.Call
+      The binary operator node with the obfuscated
+      operator name
+
+    header: dict
+      Updated header
+  '''
+  # get the operator func from the global lut
+  operator = op_lut[type(node.op)]
+  # encode the operator string as hex
+  enc_operator = [ord(x) for x in operator]
+
+  # transform the node into a call
+  obf_node = ast.Call(
+    func=ast.Call(
+      func=ast.Name(
+        id='getattr',
+        ctx=ast.Load()
+      ),
+      args=[
+        node.left, # left member of operator
+        #ast.Constant(
+        #  value=enc_operator
+        #),
+        ast.Call(
+          func=ast.Attribute(
+            value=ast.Constant(value=''),
+            attr='join',
+            ctx=ast.Load()
+          ),
+          args=[
+            ast.GeneratorExp(
+              elt=ast.Call(
+                func=ast.Name(
+                  id='chr',
+                  ctx=ast.Load()
+                ),
+                args=[ast.Name(
+                  id='x',
+                  ctx=ast.Load()
+                  )
+                ],
+                keywords=[]
+              ),
+              generators=[
+                ast.comprehension(
+                  target=ast.Name(
+                    id='x',
+                    ctx=ast.Store()
+                  ),
+                  iter=ast.List(
+                    elts=[
+                      ast.Constant(value=x)
+                        for x in enc_operator
+                    ],
+                    ctx=ast.Load()
+                  ),
+                  ifs=[],
+                  is_async=0
+                )
+              ]
+            )
+          ],
+          keywords=[]
+        )
+      ],
+      keywords=[]
+    ),
+    args=[node.right], # right member of operator
+    keywords=[]
   )
 
   return obf_node, header

@@ -23,6 +23,7 @@ from ._encoder import encrypt_builtin_function
 from ._encoder import encrypt_generic_function
 from ._encoder import encrypt_class_def
 from ._encoder import encrypt_import_aliases
+from ._encoder import encrypt_binary_operator
 from ._encoder import add_header_variables
 from ._encoder import clean_header_issues
 
@@ -41,6 +42,7 @@ class Obfuscator (object):
     encode_pkg : bool = True,
     encode_number : bool = True,
     encode_string : bool = True,
+    encode_operator : bool = True,
     reduce_code_length : bool = False,
     ):
 
@@ -50,6 +52,7 @@ class Obfuscator (object):
     self.encode_pkg = encode_pkg
     self.encode_number = encode_number
     self.encode_string = encode_string
+    self.encode_operator = encode_operator
     self.reduce_code_length = reduce_code_length
 
   def __call__ (self, code : str) -> str :
@@ -318,6 +321,18 @@ class Obfuscator (object):
         )
         node.__class__ = obf_node.__class__
         node.__dict__.update(obf_node.__dict__)
+
+      # if it is an operator
+      elif isinstance(node, ast.BinOp):
+        # if the enable operator is required
+        if self.encode_operator:
+          obf_node, header = encrypt_binary_operator(
+            node=node,
+            lut=lut,
+            header=header,
+          )
+          node.__class__ = obf_node.__class__
+          node.__dict__.update(obf_node.__dict__)
 
     # at the end of the encoding we need
     # to add the new extra-variables stored

@@ -118,6 +118,16 @@ def parse_args ():
     help='Enable/Disable the string encoding',
   )
 
+  # encode operator -k
+  parser.add_argument(
+    '--op', '-k',
+    dest='encode_operator',
+    required=False,
+    action='store_true',
+    default=False,
+    help='Enable/Disable the operator encoding',
+  )
+
   # encode string with integers -b
   parser.add_argument(
     '--enc', '-b',
@@ -168,6 +178,7 @@ def main ():
     encode_pkg=args.encode_pkg,
     encode_number=args.encode_number,
     encode_string=args.encode_string,
+    encode_operator=args.encode_operator,
     reduce_code_length=args.reduce_code_length
   )
 
