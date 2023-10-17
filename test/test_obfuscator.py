@@ -598,3 +598,32 @@ print(a.func([1, -2, 3.14]), end='', flush=True)
     # remove tmp files
     os.remove(dummy_file)
     os.remove(outfile)
+
+  def test_pkg_import (self):
+
+    code = """
+from numpy import sum
+
+def func (a, b, c):
+  return sum([a, b, c])
+
+print(func(a=1, b=2, c=3.14), end='', flush=True)
+"""
+    assert exec(code) is None
+
+    stdout = StringIO()
+    with rstdout(stdout):
+      exec(code)
+
+    assert np.round(float(stdout.getvalue()), 2) == 6.14
+
+    obf = Obfuscator()
+    obf_code = obf(code=code)
+
+    assert exec(obf_code) is None
+
+    stdout = StringIO()
+    with rstdout(stdout):
+      exec(obf_code)
+
+    assert np.round(float(stdout.getvalue()), 2) == 6.14
